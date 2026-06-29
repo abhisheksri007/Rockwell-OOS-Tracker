@@ -98,9 +98,11 @@ def delivery_short(msg: str) -> str:
 
 
 def seller_label(seller: str) -> str:
-    if not seller or seller in ("OOS", "ERR", "N/A"):
+    if not seller or seller in ("OOS", "ERR"):
         return "OOS"
-    return "Clicktech" if "clicktech" in seller.lower() else "Other"
+    if seller == "N/A":
+        return "?"
+    return seller[:10] if len(seller) > 10 else seller
 
 
 def is_oos(d: dict) -> bool:
@@ -143,7 +145,12 @@ async (asins) => {
             const doc = p.parseFromString(html, 'text/html');
             const gi  = (id) => { const e = doc.getElementById(id); return e ? e.textContent.trim() : ''; };
 
-            const priceEl = doc.querySelector('.a-price-whole');
+            const priceEl = (
+                doc.querySelector('.apexPriceToPay .a-price-whole') ||
+                doc.querySelector('#corePriceDisplay_desktop_feature_div .a-price-whole') ||
+                doc.querySelector('#apex_offerDisplay_desktop .a-price-whole') ||
+                doc.querySelector('.a-price-whole')
+            );
             const isOOS   = html.includes('Currently unavailable') && !priceEl;
 
             const delEl = doc.querySelector('#mir-layout-DELIVERY_BLOCK-slot-PRIMARY_DELIVERY_MESSAGE_LARGE')
