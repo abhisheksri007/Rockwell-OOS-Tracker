@@ -1,0 +1,33 @@
+name: Rockwell OOS Tracker
+
+on:
+  schedule:
+    - cron: '30 * * * *'   # every hour at :30 past (UTC) = 6:00 AM IST onwards
+  workflow_dispatch:        # manual trigger button in GitHub UI
+
+jobs:
+  track:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install playwright
+          playwright install chromium
+          playwright install-deps chromium
+
+      - name: Run OOS tracker
+        env:
+          GMAIL_USER:     ${{ secrets.GMAIL_USER }}
+          GMAIL_PASSWORD: ${{ secrets.GMAIL_PASSWORD }}
+          EMAIL_TO:       ${{ secrets.EMAIL_TO }}
+        run: python asin_oos_tracker.py
