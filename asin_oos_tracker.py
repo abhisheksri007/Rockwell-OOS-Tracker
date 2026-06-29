@@ -88,11 +88,10 @@ def cell_text(d: dict) -> str:
     if not d or is_oos(d):
         return "OOS"
     price  = str(d.get("price", "")).replace(",", "").strip()
-    deliv  = delivery_short(d.get("delivery", ""))
     seller = seller_label(d.get("seller", ""))
-    if deliv == "OOS" or seller == "OOS":
+    if seller == "OOS":
         return "OOS"
-    return f"{price} | {deliv} | {seller}"
+    return f"{price} | {seller}"
 
 
 # ── JS Fetch ──────────────────────────────────────────────────────────────────
