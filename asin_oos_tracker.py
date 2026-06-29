@@ -56,8 +56,10 @@ MONTHS     = ["jan","feb","mar","apr","may","jun","jul","aug","sep","oct","nov",
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 def delivery_short(msg: str) -> str:
-    if not msg or msg in ("N/A", "OOS", "ERR", ""):
-        return "OOS"
+    if not msg or msg in ("ERR", ""):
+        return "?"
+    if msg == "N/A":
+        return "?"          # delivery element not found — not necessarily OOS
     t = msg.lower()
     if "unavailable" in t or "currently" in t:
         return "OOS"
@@ -68,7 +70,7 @@ def delivery_short(msg: str) -> str:
     m = re.search(r"(\d{1,2})\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)", t)
     if m:
         return f"{m.group(1)} {m.group(2).capitalize()}"
-    return "N/A"
+    return "?"
 
 
 def seller_label(seller: str) -> str:
