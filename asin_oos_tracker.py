@@ -100,8 +100,8 @@ def delivery_short(msg: str) -> str:
 def seller_label(seller: str) -> str:
     if not seller or seller in ("OOS", "ERR"):
         return "OOS"
-    if seller == "N/A":
-        return "?"
+    if seller in ("N/A", "", "Amazon", "Amazon Retail"):
+        return "?"    # not a real seller on Amazon.in
     return seller[:10] if len(seller) > 10 else seller
 
 
@@ -146,9 +146,21 @@ async (asins) => {
             const gi  = (id) => { const e = doc.getElementById(id); return e ? e.textContent.trim() : ''; };
 
             // Scope everything to the buybox — never pick up carousel/related product prices
-            const buybox  = doc.getElementById('desktop_buybox') || doc.getElementById('buybox') || doc;
-            const isOOS   = buybox.textContent.includes('Currently unavailable');
-            const priceEl = isOOS ? null : buybox.querySelector('.a-price-whole');
+            // Do NOT fall back to doc — that picks up carousel "unavailable" text
+            const buybox  = doc.getElementById('desktop_buybox') || doc.getElementById('buybox');
+            let isOOS = false, priceEl = null;
+            if (buybox) {
+                isOOS   = buybox.textContent.includes('Currently unavailable');
+                priceEl = isOOS ? null : buybox.querySelector('.a-price-whole');
+            } else {
+                // Buybox not in static HTML (JS-rendered) — try direct price containers
+                priceEl = doc.querySelector('#corePrice_feature_div .a-price-whole') ||
+                          doc.querySelector('#price_feature_div .a-price-whole') ||
+                          doc.querySelector('#unifiedPrice_feature_div .a-price-whole');
+                // Only OOS if price is truly absent AND page says so explicitly in known element
+                const centerCol = doc.getElementById('centerCol');
+                isOOS = !priceEl && !!(centerCol && centerCol.textContent.includes('Currently unavailable'));
+            }
 
             const delEl = doc.querySelector('#mir-layout-DELIVERY_BLOCK-slot-PRIMARY_DELIVERY_MESSAGE_LARGE')
                        || doc.getElementById('deliveryBlockMessage');
@@ -158,7 +170,7 @@ async (asins) => {
                 data: {
                     title:    gi('productTitle').substring(0, 80),
                     price:    isOOS ? 'OOS' : (priceEl ? priceEl.textContent.trim().replace(/\\.$/,'') : 'N/A'),
-                    seller:   isOOS ? 'OOS' : (gi('sellerProfileTriggerId') || 'Amazon Retail'),
+                    seller:   isOOS ? 'OOS' : (gi('sellerProfileTriggerId') || gi('merchant-info') || ''),
                     delivery: delEl ? delEl.textContent.trim() : (isOOS ? 'OOS' : 'N/A'),
                 }
             };
