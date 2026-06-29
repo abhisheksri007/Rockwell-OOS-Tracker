@@ -56,10 +56,8 @@ MONTHS     = ["jan","feb","mar","apr","may","jun","jul","aug","sep","oct","nov",
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 def delivery_short(msg: str) -> str:
-    if not msg or msg in ("ERR", ""):
+    if not msg or msg in ("ERR", "", "N/A"):
         return "?"
-    if msg == "N/A":
-        return "?"          # delivery element not found — not necessarily OOS
     t = msg.lower()
     if "unavailable" in t or "currently" in t:
         return "OOS"
@@ -67,9 +65,14 @@ def delivery_short(msg: str) -> str:
         return "Today"
     if "tomorrow" in t:
         return "Tmrw"
+    # "3 Jul" or "3 July"
     m = re.search(r"(\d{1,2})\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)", t)
     if m:
-        return f"{m.group(1)} {m.group(2).capitalize()}"
+        return f"{m.group(1)} {m.group(2)[:3].capitalize()}"
+    # "Jul 3" or "July 3" (Amazon US-style format)
+    m2 = re.search(r"(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\w*\.?\s+(\d{1,2})", t)
+    if m2:
+        return f"{m2.group(2)} {m2.group(1)[:3].capitalize()}"
     return "?"
 
 
@@ -88,9 +91,12 @@ def cell_text(d: dict) -> str:
     if not d or is_oos(d):
         return "OOS"
     price  = str(d.get("price", "")).replace(",", "").strip()
+    deliv  = delivery_short(d.get("delivery", ""))
     seller = seller_label(d.get("seller", ""))
     if seller == "OOS":
         return "OOS"
+    if deliv and deliv not in ("?", "OOS"):
+        return f"{price} | {deliv} | {seller}"
     return f"{price} | {seller}"
 
 
@@ -270,14 +276,14 @@ def build_html(grid: dict, ts: str, prev_state: dict) -> str:
           <strong style="color:#27AE60;">Back in Stock:</strong>
           <ul style="margin:4pt 0 0 16pt;padding:0;">{items}</ul></div>"""
 
-    header_cells = '<th style="background:#1A5276;color:white;padding:6pt 12pt;font-size:12pt;text-align:left;white-space:nowrap;">ASIN</th>'
+    header_cells = '<th nowrap="nowrap" style="background:#1A5276;color:white;padding:6pt 10pt;font-size:12pt;text-align:left;">ASIN</th>'
     for city in city_list:
-        header_cells += f'<th style="background:#1A5276;color:white;padding:6pt 12pt;font-size:12pt;text-align:center;white-space:nowrap;">{city}</th>'
+        header_cells += f'<th nowrap="nowrap" style="background:#1A5276;color:white;padding:6pt 10pt;font-size:12pt;text-align:center;">{city}</th>'
 
     rows_html = ""
     for i, asin in enumerate(ASINS):
         row_bg = "#F2F3F4" if i % 2 == 0 else "#FFFFFF"
-        row = f'<tr><td style="background:{row_bg};padding:5pt 12pt;font-size:12pt;font-weight:bold;color:#1a1a1a;white-space:nowrap;">{asin}</td>'
+        row = f'<tr><td nowrap="nowrap" style="background:{row_bg};padding:5pt 10pt;font-size:12pt;font-weight:bold;color:#1a1a1a;">{asin}</td>'
         for city in city_list:
             d   = grid.get(city, {}).get(asin, {})
             txt = cell_text(d)
@@ -287,7 +293,7 @@ def build_html(grid: dict, ts: str, prev_state: dict) -> str:
                 td_style = f"background:{row_bg};color:#AAA;text-align:center;"
             else:
                 td_style = f"background:{row_bg};color:#1a1a1a;"
-            row += f'<td style="{td_style}padding:5pt 12pt;font-size:12pt;white-space:nowrap;">{txt}</td>'
+            row += f'<td nowrap="nowrap" style="{td_style}padding:5pt 10pt;font-size:12pt;">{txt}</td>'
         row += "</tr>"
         rows_html += row
 
