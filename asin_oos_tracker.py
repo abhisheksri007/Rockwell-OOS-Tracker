@@ -57,7 +57,7 @@ MONTHS     = ["jan","feb","mar","apr","may","jun","jul","aug","sep","oct","nov",
 
 def delivery_short(msg: str) -> str:
     if not msg or msg in ("ERR", "", "N/A"):
-        return "?"
+        return "?"          # element not found — not OOS
     t = msg.lower()
     if "unavailable" in t or "currently" in t:
         return "OOS"
@@ -65,14 +65,9 @@ def delivery_short(msg: str) -> str:
         return "Today"
     if "tomorrow" in t:
         return "Tmrw"
-    # "3 Jul" or "3 July"
     m = re.search(r"(\d{1,2})\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)", t)
     if m:
         return f"{m.group(1)} {m.group(2)[:3].capitalize()}"
-    # "Jul 3" or "July 3" (Amazon US-style format)
-    m2 = re.search(r"(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\w*\.?\s+(\d{1,2})", t)
-    if m2:
-        return f"{m2.group(2)} {m2.group(1)[:3].capitalize()}"
     return "?"
 
 
