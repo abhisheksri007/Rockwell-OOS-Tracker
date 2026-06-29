@@ -145,13 +145,10 @@ async (asins) => {
             const doc = p.parseFromString(html, 'text/html');
             const gi  = (id) => { const e = doc.getElementById(id); return e ? e.textContent.trim() : ''; };
 
-            const priceEl = (
-                doc.querySelector('.apexPriceToPay .a-price-whole') ||
-                doc.querySelector('#corePriceDisplay_desktop_feature_div .a-price-whole') ||
-                doc.querySelector('#apex_offerDisplay_desktop .a-price-whole') ||
-                doc.querySelector('.a-price-whole')
-            );
-            const isOOS   = html.includes('Currently unavailable') && !priceEl;
+            // Scope everything to the buybox — never pick up carousel/related product prices
+            const buybox  = doc.getElementById('desktop_buybox') || doc.getElementById('buybox') || doc;
+            const isOOS   = buybox.textContent.includes('Currently unavailable');
+            const priceEl = isOOS ? null : buybox.querySelector('.a-price-whole');
 
             const delEl = doc.querySelector('#mir-layout-DELIVERY_BLOCK-slot-PRIMARY_DELIVERY_MESSAGE_LARGE')
                        || doc.getElementById('deliveryBlockMessage');
