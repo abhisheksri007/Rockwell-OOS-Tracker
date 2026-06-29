@@ -25,14 +25,40 @@ except ImportError:
 # ── Config ────────────────────────────────────────────────────────────────────
 
 ASINS = [
-    "B085DGN48J",
-    "B091YZYK2Y",
-    "B091YZGX77",
-    "B08BJKT6SL",
-    "B0D1R6G5MZ",
-    "B0DLWM5QHT",
-    "B0DLWRV891",
+    "B085DGN48J", "B0D1R6G5MZ", "B091YZGX77", "B091YZYK2Y",
+    "B0DD3TWMD6", "B0D3DBRGXH", "B08BJKT6SL", "B093SMWB6S",
+    "B085DNFLGL", "B0DLWM5QHT", "B0CRTXGJ6Y", "B0DD3WLT3R",
+    "B0BYZ2R4G6", "B0G343ZTYC", "B0D673WSKX", "B0CKYMZHVC",
+    "B0BYZ38LB1", "B0GG4LL128", "B0CMMGMGTT", "B0DGCSVPMW",
+    "B08BJJMKTN", "B08BJM4WXR", "B0FL2K9X1D", "B0DLWRV891",
+    "B08BJKSN48", "B0G45CQK51", "B0G347KDFD", "B0DRPMBBMZ",
+    "B0CRYZDBYL", "B0CRTXDRZK", "B0G34756BM", "B0BYZ2ZFBY",
+    "B0CRZ2G3NX", "B0FJ1GWF9P", "B0FJ1GKY63", "B0F1TWDZKR",
+    "B0F8QM74DC", "B0CCKXDR4K", "B0G458DQT8", "B0G45C1YS2",
 ]
+
+MODEL_MAP = {
+    "B085DGN48J": "GFR550DDUC",    "B0D1R6G5MZ": "MB100",
+    "B091YZGX77": "SFR350DDU",     "B091YZYK2Y": "SFR550DDU",
+    "B0DD3TWMD6": "SFR-750",       "B0D3DBRGXH": "SFR350GTS",
+    "B08BJKT6SL": "GFR350DDUC",    "B093SMWB6S": "GFR910UC",
+    "B085DNFLGL": "GFR450DDUC",    "B0DLWM5QHT": "MB49BL",
+    "B0CRTXGJ6Y": "RWCSS 4080",    "B0DD3WLT3R": "SFR450GTS",
+    "B0BYZ2R4G6": "RVC400A",       "B0G343ZTYC": "RVC400",
+    "B0D673WSKX": "UF300A",        "B0CKYMZHVC": "RVC320A",
+    "B0BYZ38LB1": "RVC500A",       "B0GG4LL128": "SFR250SDU-4S",
+    "B0CMMGMGTT": "SFR70",         "B0DGCSVPMW": "RVC600A",
+    "B08BJJMKTN": "SFR250GT",      "B08BJM4WXR": "SFR550GT",
+    "B0FL2K9X1D": "MB55GR",        "B0DLWRV891": "MB49WH",
+    "B08BJKSN48": "GFR250SDUC",    "B0G45CQK51": "SFR350SDU-5S",
+    "B0G347KDFD": "RVC550",        "B0DRPMBBMZ": "RVC200A",
+    "B0CRYZDBYL": "RMC30S",        "B0CRTXDRZK": "RWCSS 150150",
+    "B0G34756BM": "RVC700",        "B0BYZ2ZFBY": "BB340C",
+    "B0CRZ2G3NX": "RMC60D",        "B0FJ1GWF9P": "RWCSS6080ISIB",
+    "B0FJ1GKY63": "RWCSS1540ISIA", "B0F1TWDZKR": "MB49GWH",
+    "B0F8QM74DC": "FFP1063",       "B0CCKXDR4K": "COMBI400A",
+    "B0G458DQT8": "GFR1210F-5S",   "B0G45C1YS2": "SFR450DDU-5S",
+}
 
 CITIES = {
     "Bangalore": 560055,
@@ -298,14 +324,21 @@ def build_html(grid: dict, ts: str, prev_state: dict) -> str:
           <strong style="color:#27AE60;">Back in Stock:</strong>
           <ul style="margin:4pt 0 0 16pt;padding:0;">{items}</ul></div>"""
 
-    header_cells = '<th nowrap="nowrap" style="background:#1A5276;color:white;padding:6pt 10pt;font-size:12pt;text-align:left;">ASIN</th>'
+    header_cells = (
+        '<th nowrap="nowrap" style="background:#1A5276;color:white;padding:6pt 10pt;font-size:12pt;text-align:left;">ASIN</th>'
+        '<th nowrap="nowrap" style="background:#1A5276;color:white;padding:6pt 10pt;font-size:12pt;text-align:left;">Model</th>'
+    )
     for city in city_list:
         header_cells += f'<th nowrap="nowrap" style="background:#1A5276;color:white;padding:6pt 10pt;font-size:12pt;text-align:center;">{city}</th>'
 
     rows_html = ""
     for i, asin in enumerate(ASINS):
         row_bg = "#F2F3F4" if i % 2 == 0 else "#FFFFFF"
-        row = f'<tr><td nowrap="nowrap" style="background:{row_bg};padding:5pt 10pt;font-size:12pt;font-weight:bold;color:#1a1a1a;">{asin}</td>'
+        model = MODEL_MAP.get(asin, "")
+        row = (
+            f'<tr><td nowrap="nowrap" style="background:{row_bg};padding:5pt 10pt;font-size:12pt;font-weight:bold;color:#1a1a1a;">{asin}</td>'
+            f'<td nowrap="nowrap" style="background:{row_bg};padding:5pt 10pt;font-size:12pt;color:#555;">{model}</td>'
+        )
         for city in city_list:
             d   = grid.get(city, {}).get(asin, {})
             txt = cell_text(d)
