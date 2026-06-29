@@ -143,8 +143,17 @@ async (asins) => {
 # ── Browser ───────────────────────────────────────────────────────────────────
 
 async def change_pincode(page, pincode: int) -> bool:
-    await page.goto("https://www.amazon.in", wait_until="domcontentloaded")
-    await asyncio.sleep(3)
+    await page.goto("https://www.amazon.in", wait_until="load", timeout=30000)
+
+    # Wait up to 15s for location button to appear (slower on GH servers)
+    try:
+        await page.wait_for_selector(
+            "#nav-global-location-popover-link, #glow-ingress-block",
+            timeout=15000
+        )
+    except Exception:
+        print(f"  ✗ Location button not found (timeout)")
+        return False
 
     btn = (await page.query_selector("#nav-global-location-popover-link")
            or await page.query_selector("#glow-ingress-block"))
@@ -153,7 +162,13 @@ async def change_pincode(page, pincode: int) -> bool:
         return False
 
     await btn.click()
-    await asyncio.sleep(4)
+
+    # Wait for pincode input to appear
+    try:
+        await page.wait_for_selector("#GLUXZipUpdateInput", timeout=10000)
+    except Exception:
+        print(f"  ✗ Pincode dialog not found (timeout)")
+        return False
 
     inp = await page.query_selector("#GLUXZipUpdateInput")
     sub = await page.query_selector('#GLUXZipUpdate input[type="submit"]')
@@ -166,7 +181,7 @@ async def change_pincode(page, pincode: int) -> bool:
     await asyncio.sleep(1.5)
     await sub.click()
     await asyncio.sleep(8)
-    await page.reload(wait_until="domcontentloaded")
+    await page.reload(wait_until="load", timeout=30000)
     await asyncio.sleep(2)
 
     cur = await page.query_selector("#glow-ingress-line2")
