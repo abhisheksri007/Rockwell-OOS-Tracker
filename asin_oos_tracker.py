@@ -143,51 +143,63 @@ async (asins) => {
 # ── Browser ───────────────────────────────────────────────────────────────────
 
 async def change_pincode(page, pincode: int) -> bool:
-    await page.goto("https://www.amazon.in", wait_until="load", timeout=30000)
-
-    # Wait up to 15s for location button to appear (slower on GH servers)
-    try:
-        await page.wait_for_selector(
-            "#nav-global-location-popover-link, #glow-ingress-block",
-            timeout=15000
-        )
-    except Exception:
-        print(f"  ✗ Location button not found (timeout)")
-        return False
-
-    btn = (await page.query_selector("#nav-global-location-popover-link")
-           or await page.query_selector("#glow-ingress-block"))
-    if not btn:
-        print(f"  ✗ Location button not found")
-        return False
-
-    await btn.click()
-
-    # Wait for pincode input to appear
-    try:
-        await page.wait_for_selector("#GLUXZipUpdateInput", timeout=10000)
-    except Exception:
-        print(f"  ✗ Pincode dialog not found (timeout)")
-        return False
-
-    inp = await page.query_selector("#GLUXZipUpdateInput")
-    sub = await page.query_selector('#GLUXZipUpdate input[type="submit"]')
-    if not inp or not sub:
-        print(f"  ✗ Pincode dialog not found")
-        return False
-
-    await inp.fill("")
-    await inp.type(str(pincode), delay=80)
-    await asyncio.sleep(1.5)
-    await sub.click()
-    await asyncio.sleep(8)
-    await page.reload(wait_until="load", timeout=30000)
+    """Set pincode via Amazon's address-change API — no UI interaction needed."""
+    # First land on amazon.in to establish session/cookies
+    await page.goto("https://www.amazon.in", wait_until="domcontentloaded", timeout=30000)
     await asyncio.sleep(2)
 
-    cur = await page.query_selector("#glow-ingress-line2")
-    loc = (await cur.inner_text()).strip() if cur else "unknown"
-    print(f"  ✓ {loc}")
-    return True
+    # Call Amazon's internal address-change endpoint directly (what the UI does behind the scenes)
+    result = await page.evaluate("""
+        async (pincode) => {
+            try {
+                const resp = await fetch('/portal-migration/hz/glow/address-change?actionSource=glow', {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'Accept': 'application/json, text/javascript, */*; q=0.01',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: `locationType=LOCATION_INPUT&zipCode=${pincode}&storeContext=apparel&deviceType=web&pageType=Detail&actionSource=glow`
+                });
+                const data = await resp.json();
+                return { ok: resp.ok, status: resp.status, data };
+            } catch(e) {
+                return { ok: false, error: e.message };
+            }
+        }
+    """, str(pincode))
+
+    if result.get("ok"):
+        print(f"  ✓ Pincode {pincode} set via API")
+        return True
+
+    # Fallback: UI-based picker
+    print(f"  ↳ API fallback (status {result.get('status')}) — trying UI...")
+    try:
+        await page.wait_for_selector(
+            "#nav-global-location-popover-link, #glow-ingress-block", timeout=12000
+        )
+        btn = (await page.query_selector("#nav-global-location-popover-link")
+               or await page.query_selector("#glow-ingress-block"))
+        await btn.click()
+        await page.wait_for_selector("#GLUXZipUpdateInput", timeout=8000)
+        inp = await page.query_selector("#GLUXZipUpdateInput")
+        sub = await page.query_selector('#GLUXZipUpdate input[type="submit"]')
+        await inp.fill("")
+        await inp.type(str(pincode), delay=80)
+        await asyncio.sleep(1.5)
+        await sub.click()
+        await asyncio.sleep(6)
+        await page.reload(wait_until="domcontentloaded", timeout=20000)
+        await asyncio.sleep(2)
+        cur = await page.query_selector("#glow-ingress-line2")
+        loc = (await cur.inner_text()).strip() if cur else "unknown"
+        print(f"  ✓ UI fallback → {loc}")
+        return True
+    except Exception as e:
+        print(f"  ✗ Both methods failed: {e}")
+        return False
 
 
 async def fetch_city(pw, city: str, pincode: int) -> dict:
